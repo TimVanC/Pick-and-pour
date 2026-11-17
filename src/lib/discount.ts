@@ -11,8 +11,119 @@ export type DiscountProfile = {
   cap: number;
 };
 
+export type JurisdictionCode = "NJ" | "NY";
+
+/** What a jurisdiction allows. The math is the same everywhere; only these differ. */
+export type JurisdictionProfile = {
+  code: JurisdictionCode;
+  name: string;
+  scaleMin: number;
+  scaleMax: number;
+  scaleDefault: number;
+  /** When true the manager cannot change the scale. */
+  scaleLocked: boolean;
+  /** Highest discount allowed. */
+  cap: number;
+  /** When true the manager cannot lower the cap either. */
+  capLocked: boolean;
+  costFloorRequired: boolean;
+  /** Shown in the house rules on the guest page and table card. */
+  rulesText: string;
+};
+
+export const JURISDICTIONS: Record<JurisdictionCode, JurisdictionProfile> = {
+  NJ: {
+    code: "NJ",
+    name: "New Jersey",
+    scaleMin: 0.25,
+    scaleMax: 1,
+    scaleDefault: 0.75,
+    scaleLocked: false,
+    // Safe blended limit without per-item costs (phase 1).
+    cap: 0.65,
+    capLocked: false,
+    costFloorRequired: false,
+    rulesText: "Maximum discount 65% under New Jersey rules.",
+  },
+  NY: {
+    code: "NY",
+    name: "New York",
+    scaleMin: 0.5,
+    scaleMax: 0.5,
+    scaleDefault: 0.5,
+    scaleLocked: true,
+    cap: 0.5,
+    capLocked: true,
+    costFloorRequired: false,
+    rulesText: "Maximum discount 50% under New York rules.",
+  },
+};
+
+export function jurisdiction(code: string): JurisdictionProfile {
+  return JURISDICTIONS[code as JurisdictionCode] ?? JURISDICTIONS.NJ;
+}
+
+/** The scale and cap actually in force: the venue's settings held inside the profile's limits. */
+export function effectiveLimits(
+  profile: JurisdictionProfile,
+  venueSettings: { scale?: number; cap?: number },
+): DiscountProfile {
+  const scale = profile.scaleLocked
+    ? profile.scaleDefault
+    : Math.min(
+        profile.scaleMax,
+        Math.max(profile.scaleMin, venueSettings.scale ?? profile.scaleDefault),
+      );
+  const cap = profile.capLocked
+    ? profile.cap
+    : Math.min(profile.cap, Math.max(0, venueSettings.cap ?? profile.cap));
+  return { scale, cap };
+}
+
 /** NJ default profile without item costs: scale 0.75, 65% blended cap. */
-export const NJ_DEFAULT_PROFILE: DiscountProfile = { scale: 0.75, cap: 0.65 };
+export const NJ_DEFAULT_PROFILE: DiscountProfile = effectiveLimits(
+  JURISDICTIONS.NJ,
+  {},
+);
+
+export type PickState = "open" | "locked" | "won" | "lost";
+
+/**
+ * The discount engine. One pure function for every screen:
+ * - open:   what the pick could lock in for right now
+ * - locked: the same formula, evaluated at the moment of the lock (pass that probability)
+ * - won:    the full win discount
+ * - lost:   nothing
+ */
+export function computeDiscount(
+  profile: JurisdictionProfile,
+  venueSettings: { scale?: number; cap?: number },
+  pEntry: number,
+  pNow: number,
+  state: PickState,
+): number {
+  if (state === "lost") return 0;
+  const dWin = winDiscount(effectiveLimits(profile, venueSettings), pEntry);
+  if (state === "won") return dWin;
+  return lockInDiscount(dWin, pEntry, pNow);
+}
+
+/** Spend the pick covers: what was rung up after the pick, up to the venue's maximum. */
+export function coveredSpendCents(
+  subtotalNowCents: number,
+  subtotalAtPickCents: number,
+  maxCoveredCents: number,
+): number {
+  return Math.max(
+    0,
+    Math.min(maxCoveredCents, subtotalNowCents - subtotalAtPickCents),
+  );
+}
+
+/** Discount in whole cents, before tax. */
+export function discountCents(discount: number, coveredCents: number): number {
+  return Math.round(discount * coveredCents);
+}
 
 /** Implied probability of one side from American odds (still includes the margin). */
 export function impliedProbability(americanOdds: number): number {
