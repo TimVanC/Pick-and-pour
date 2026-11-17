@@ -3,13 +3,24 @@
  * Anything marked PLACEHOLDER still needs a real value before launch.
  */
 
+/**
+ * Public address of the site, used for canonical links, the sitemap and the OG image.
+ * 1. NEXT_PUBLIC_SITE_URL if set (use this for a custom domain).
+ * 2. Otherwise the project's production domain on Vercel (set by Vercel at build time).
+ * 3. Otherwise a PLACEHOLDER.
+ */
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "https://pickandpour.example");
+
 export const site = {
   name: "Pick & Pour",
   tagline: "Turn slow Sundays into game day",
   description:
     "Pick & Pour turns game days at your bar into a live game: guests pick a side, and if their team wins, their tab drops. Free for guests, never above menu price.",
-  /** Set NEXT_PUBLIC_SITE_URL to the production domain. The fallback is a PLACEHOLDER. */
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://pickandpour.example",
+  url: siteUrl,
   footerLine:
     "Free for guests. Never above menu price. Subject to local liquor rules.",
   madeBy: "Made in New Jersey by VanHaus",
