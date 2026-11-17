@@ -47,6 +47,7 @@ const settings = {
   lateCutoffPeriod: 3,
   lockWindowUntil: null,
   favoriteTeams: [],
+  posProvider: "manual",
 };
 const [venue] = await sql`
   insert into venues (name, jurisdiction_code, tv_token, passcode_hash, settings)

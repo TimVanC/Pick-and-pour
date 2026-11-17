@@ -25,6 +25,8 @@ export async function POST(request: Request) {
           tabLabel: String(input.tabLabel ?? ""),
           seat: String(input.seat ?? ""),
           subtotalCents: Number(input.subtotalCents) || 0,
+          posOrderId: typeof input.posOrderId === "string" ? input.posOrderId : undefined,
+          posCheckId: typeof input.posCheckId === "string" ? input.posCheckId : undefined,
         });
         return { ok: true, pickId: id };
       }

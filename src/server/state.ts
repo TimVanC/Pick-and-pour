@@ -12,8 +12,10 @@ import {
   effectiveLimits,
   jurisdiction,
   lockInDiscount,
+  maxCap,
   probabilityToLine,
 } from "@/lib/discount";
+import type { LineDiscount } from "@/lib/line-discount";
 import { db, iso } from "./db";
 
 /** How long a live game can go without fresh odds before picks and lock-ins stop. */
@@ -29,6 +31,8 @@ export type Venue = {
   tvToken: string;
   passcodeHash: string;
   settings: VenueSettings;
+  /** True when a POS with item costs is connected (per-item limits apply). */
+  costFloors: boolean;
 };
 
 type Row = Record<string, unknown>;
@@ -36,7 +40,10 @@ type Row = Record<string, unknown>;
 function venueFromRow(row: Row): Venue {
   const profile = jurisdiction(String(row.jurisdiction_code));
   const raw = (row.settings ?? {}) as Partial<VenueSettings>;
-  const limits = effectiveLimits(profile, raw);
+  const posProvider = raw.posProvider === "mock-toast" ? "mock-toast" : "manual";
+  // A connected POS carries item costs, which turns the per-item limits on.
+  const costFloors = posProvider !== "manual";
+  const limits = effectiveLimits(profile, { ...raw, costFloors });
   return {
     id: String(row.id),
     name: String(row.name),
@@ -51,7 +58,9 @@ function venueFromRow(row: Row): Venue {
       lateCutoffPeriod: raw.lateCutoffPeriod ?? 3,
       lockWindowUntil: raw.lockWindowUntil ?? null,
       favoriteTeams: raw.favoriteTeams ?? [],
+      posProvider,
     },
+    costFloors,
   };
 }
 
@@ -79,6 +88,8 @@ export function venueView(venue: Venue): VenueView {
     rulesText: profile.rulesText,
     settings: venue.settings,
     limits: { scale: venue.settings.scale, cap: venue.settings.cap },
+    costFloors: venue.costFloors,
+    maxCap: maxCap(profile, venue.costFloors),
   };
 }
 
@@ -172,8 +183,19 @@ export async function gamesForVenue(
         ${options.gameId ?? null}::uuid is not null
         or (
           g.start_time > now() - interval '8 hours'
-          and (g.provider <> 'sim' or g.provider_game_id like ${`${venue.id}:%`})
+          -- Demo and replay games belong to the venue that started them.
+          and (g.provider not in ('sim', 'kalshi-replay') or g.provider_game_id like ${`${venue.id}:%`})
           and (${options.featuredOnly ?? false}::boolean = false or f.game_id is not null)
+          -- Finished games from an earlier slate only stay while they still have picks.
+          and (
+            f.game_id is not null
+            or g.status in ('scheduled', 'live')
+            or exists (
+              select 1 from picks p
+              where p.game_id = g.id and p.venue_id = ${venue.id}
+                and p.created_at > now() - interval '24 hours'
+            )
+          )
         )
       )
     order by g.start_time, g.home
@@ -224,6 +246,9 @@ export function pickFromRow(row: Row, game: GameView | undefined, now: Date): Pi
     settledAt: iso(row.settled_at),
     appliedAt: iso(row.applied_at),
     undoUntil,
+    posOrderId: (row.pos_order_id as string | null) ?? null,
+    posCheckId: (row.pos_check_id as string | null) ?? null,
+    discountLines: (row.discount_lines as LineDiscount[] | null) ?? null,
   };
 }
 

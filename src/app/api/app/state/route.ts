@@ -1,7 +1,7 @@
 import type { AppState } from "@/lib/app-types";
 import { respond } from "@/server/api";
 import { db } from "@/server/db";
-import { canSimulate, refreshVenueGames } from "@/server/odds/refresh";
+import { canSimulate, refreshVenueGames, replaySundays } from "@/server/odds/refresh";
 import { getSession } from "@/server/session";
 import {
   gamesForVenue,
@@ -46,6 +46,7 @@ export async function GET() {
               staff: staffList.map(({ id, name, role }) => ({ id, name, role })),
               tvToken: venue.tvToken,
               canSimulate,
+              replaySundays: replaySundays(),
             }
           : null,
       serverTime: new Date(now as Date).toISOString(),

@@ -1,11 +1,15 @@
-import type { Role, Side, StaffView } from "@/lib/app-types";
+import type { Role, SettlementPreview, Side, StaffView } from "@/lib/app-types";
 import {
   coveredSpendCents,
   discountCents,
+  jurisdiction,
   lockInDiscount,
   winDiscount,
 } from "@/lib/discount";
+import { discountCheck } from "@/lib/line-discount";
 import { db } from "./db";
+import { posForVenue } from "./pos";
+import type { PosCheck } from "./pos/provider";
 import { randomToken } from "./session";
 import { UNDO_MS, gamesForVenue, type Venue } from "./state";
 
@@ -72,10 +76,30 @@ function summary(row: Row): Row {
 export async function createPick(
   venue: Venue,
   actor: Actor,
-  input: { gameId: string; side: Side; tabLabel: string; seat: string; subtotalCents: number },
+  input: {
+    gameId: string;
+    side: Side;
+    tabLabel: string;
+    seat: string;
+    subtotalCents: number;
+    /** Set when the pick is attached to an open POS check instead of a typed label. */
+    posOrderId?: string;
+    posCheckId?: string;
+  },
 ): Promise<string> {
-  const tabLabel = input.tabLabel.trim().slice(0, 60);
-  const seat = input.seat.trim().slice(0, 12);
+  // With a POS check, the tab name and the spend so far come from the POS.
+  let check: PosCheck | null = null;
+  if (input.posOrderId && input.posCheckId) {
+    const pos = posForVenue(venue);
+    if (!pos) throw new UserError("This venue is not connected to a POS.");
+    check = await pos.provider.getCheck(pos.restaurantId, input.posOrderId, input.posCheckId);
+    if (!check || !check.open) throw new UserError("That check is not open in the POS any more.");
+  }
+  const tabLabel = (check ? check.tabName : input.tabLabel).trim().slice(0, 60);
+  const seat = check ? "" : input.seat.trim().slice(0, 12);
+  const subtotalAtPick = check
+    ? check.subtotalCents
+    : Math.max(0, Math.round(input.subtotalCents));
   if (!tabLabel) throw new UserError("Add a name for the tab.");
   if (input.side !== "home" && input.side !== "away") throw new UserError("Choose a side.");
 
@@ -88,13 +112,20 @@ export async function createPick(
 
   const sql = db();
   // One active pick per tab, and never both sides of the same game.
-  const existing = await sql`
-    select game_id, status from picks
-    where venue_id = ${venue.id}
-      and lower(tab_label) = lower(${tabLabel}) and lower(seat) = lower(${seat})
-      and status <> 'void'
-      and created_at > now() - interval '18 hours'
-  `;
+  // A POS tab is identified by its check; a typed tab by its name and seat.
+  const existing = check
+    ? await sql`
+        select game_id, status from picks
+        where venue_id = ${venue.id} and pos_check_id = ${check.checkId} and status <> 'void'
+      `
+    : await sql`
+        select game_id, status from picks
+        where venue_id = ${venue.id}
+          and pos_check_id is null
+          and lower(tab_label) = lower(${tabLabel}) and lower(seat) = lower(${seat})
+          and status <> 'void'
+          and created_at > now() - interval '18 hours'
+      `;
   if (existing.some((row) => row.game_id === input.gameId)) {
     throw new UserError("This tab already has a pick on this game.");
   }
@@ -110,11 +141,11 @@ export async function createPick(
   const rows = await sql`
     insert into picks
       (venue_id, game_id, side, tab_label, seat, staff_id, entry_snapshot_id,
-       p_entry, d_win, subtotal_at_pick_cents, guest_token)
+       p_entry, d_win, subtotal_at_pick_cents, guest_token, pos_order_id, pos_check_id)
     values (
       ${venue.id}, ${input.gameId}, ${input.side}, ${tabLabel}, ${seat}, ${actor.id},
       ${snapshot.id}, ${pEntry}, ${dWin},
-      ${Math.max(0, Math.round(input.subtotalCents))}, ${randomToken()}
+      ${subtotalAtPick}, ${randomToken()}, ${check?.orderId ?? null}, ${check?.checkId ?? null}
     )
     returning id
   `;
@@ -197,6 +228,9 @@ export async function applyPick(
   if (pick.status !== "locked" && pick.status !== "settled") {
     throw new UserError("This pick is not ready to settle yet.");
   }
+  if (pick.pos_check_id && Number(pick.d_final ?? 0) > 0) {
+    throw new UserError("This pick is on a POS check. Post the discount to the check instead.");
+  }
   const subtotal = Math.max(0, Math.round(subtotalCents));
   const covered = coveredSpendCents(
     subtotal,
@@ -255,4 +289,88 @@ export async function voidPick(venue: Venue, actor: Actor, pickId: string): Prom
   if (pick.status === "void") return;
   await db()`update picks set status = 'void', result = 'void' where id = ${pickId}`;
   await audit(venue.id, actor.id, "pick_voided", pickId, summary(pick), { status: "void" });
+}
+
+/* ----------------------- Picks attached to a POS check ----------------------- */
+
+/**
+ * What settling a POS-attached pick would take off the check right now, line
+ * by line, under the venue's jurisdiction rules (NJ cost floor, NY half price).
+ */
+export async function previewPosSettlement(
+  venue: Venue,
+  pickId: string,
+): Promise<SettlementPreview & { pick: Row }> {
+  const pick = await loadPick(venue, pickId);
+  const pos = posForVenue(venue);
+  if (!pos || !pick.pos_order_id || !pick.pos_check_id) {
+    throw new UserError("This pick is not attached to a POS check.");
+  }
+  const check = await pos.provider.getCheck(
+    pos.restaurantId,
+    String(pick.pos_order_id),
+    String(pick.pos_check_id),
+  );
+  if (!check) throw new UserError("That check is no longer in the POS.");
+
+  const discount = discountCheck({
+    profile: jurisdiction(venue.jurisdictionCode),
+    costFloors: venue.costFloors,
+    discount: Number(pick.d_final ?? 0),
+    // A line that already carries a discount is left alone: the POS allows one per item.
+    lines: check.lines.map((line) => ({
+      id: line.id,
+      name: line.quantity > 1 ? `${line.quantity} × ${line.name}` : line.name,
+      priceCents: line.priceCents,
+      costCents: line.costCents,
+      addedAt: new Date(line.addedAt).getTime(),
+      voided: line.voided || line.discountCents > 0,
+    })),
+    pickedAt: new Date(String(pick.created_at)).getTime(),
+    maxCoveredCents: venue.settings.maxCoveredCents,
+  });
+  return { check, discount, pick };
+}
+
+/** Post the line-by-line discount to the POS check and mark the pick applied. */
+export async function applyPosPick(venue: Venue, actor: Actor, pickId: string): Promise<void> {
+  const { check, discount, pick } = await previewPosSettlement(venue, pickId);
+  if (pick.status !== "locked" && pick.status !== "settled") {
+    throw new UserError("This pick is not ready to settle yet.");
+  }
+  const pos = posForVenue(venue);
+  if (!pos) throw new UserError("This venue is not connected to a POS.");
+  if (!check.open) throw new UserError("That check is already closed in the POS.");
+
+  const lines = discount.lines
+    .filter((line) => line.discountCents > 0)
+    .map((line) => ({ lineId: line.id, amountCents: line.discountCents }));
+  if (lines.length > 0) {
+    // The pick id is the reference, so a retry after a dropped connection cannot double up.
+    await pos.provider.applyDiscount(pos.restaurantId, check.orderId, check.checkId, {
+      name: "Pick & Pour",
+      reference: pickId,
+      lines,
+    });
+  }
+
+  const rows = await db()`
+    update picks set
+      status = 'applied', subtotal_at_settle_cents = ${check.subtotalCents},
+      covered_cents = ${discount.coveredCents}, discount_cents = ${discount.discountCents},
+      discount_lines = ${JSON.stringify(discount.lines)}::jsonb, applied_at = now()
+    where id = ${pickId} and status in ('locked', 'settled')
+    returning id
+  `;
+  if (!rows[0]) throw new UserError("That pick just changed. Check it again.");
+  await audit(venue.id, actor.id, "pick_applied_pos", pickId, summary(pick), {
+    status: "applied",
+    pos_check_id: check.checkId,
+    subtotal_cents: check.subtotalCents,
+    covered_cents: discount.coveredCents,
+    discount_cents: discount.discountCents,
+    unlimited_discount_cents: discount.unlimitedDiscountCents,
+    d_final: pick.d_final,
+    lines: discount.lines,
+  });
 }

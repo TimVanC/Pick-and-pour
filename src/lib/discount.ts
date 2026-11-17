@@ -26,6 +26,17 @@ export type JurisdictionProfile = {
   cap: number;
   /** When true the manager cannot lower the cap either. */
   capLocked: boolean;
+  /**
+   * Highest discount allowed once per-item limits are enforced line by line
+   * (item costs loaded from a POS or a CSV). Null when the cap never changes.
+   */
+  capWithItemLimits: number | null;
+  /**
+   * The per-item rule applied when a discount is computed line by line:
+   * - cost:      an item is never discounted below its cost (NJ)
+   * - halfPrice: an item is never discounted below half its regular price (NY)
+   */
+  itemLimit: "cost" | "halfPrice";
   costFloorRequired: boolean;
   /** Shown in the house rules on the guest page and table card. */
   rulesText: string;
@@ -42,6 +53,8 @@ export const JURISDICTIONS: Record<JurisdictionCode, JurisdictionProfile> = {
     // Safe blended limit without per-item costs (phase 1).
     cap: 0.65,
     capLocked: false,
+    capWithItemLimits: 0.9,
+    itemLimit: "cost",
     costFloorRequired: false,
     rulesText: "Maximum discount 65% under New Jersey rules.",
   },
@@ -54,6 +67,8 @@ export const JURISDICTIONS: Record<JurisdictionCode, JurisdictionProfile> = {
     scaleLocked: true,
     cap: 0.5,
     capLocked: true,
+    capWithItemLimits: null,
+    itemLimit: "halfPrice",
     costFloorRequired: false,
     rulesText: "Maximum discount 50% under New York rules.",
   },
@@ -63,11 +78,19 @@ export function jurisdiction(code: string): JurisdictionProfile {
   return JURISDICTIONS[code as JurisdictionCode] ?? JURISDICTIONS.NJ;
 }
 
+/** The highest cap a venue may choose. Higher when per-item cost floors are on (NJ). */
+export function maxCap(profile: JurisdictionProfile, costFloors: boolean): number {
+  return costFloors && profile.capWithItemLimits !== null
+    ? profile.capWithItemLimits
+    : profile.cap;
+}
+
 /** The scale and cap actually in force: the venue's settings held inside the profile's limits. */
 export function effectiveLimits(
   profile: JurisdictionProfile,
-  venueSettings: { scale?: number; cap?: number },
+  venueSettings: { scale?: number; cap?: number; costFloors?: boolean },
 ): DiscountProfile {
+  const highestCap = maxCap(profile, venueSettings.costFloors ?? false);
   const scale = profile.scaleLocked
     ? profile.scaleDefault
     : Math.min(
@@ -76,7 +99,7 @@ export function effectiveLimits(
       );
   const cap = profile.capLocked
     ? profile.cap
-    : Math.min(profile.cap, Math.max(0, venueSettings.cap ?? profile.cap));
+    : Math.min(highestCap, Math.max(0, venueSettings.cap ?? profile.cap));
   return { scale, cap };
 }
 
@@ -97,7 +120,7 @@ export type PickState = "open" | "locked" | "won" | "lost";
  */
 export function computeDiscount(
   profile: JurisdictionProfile,
-  venueSettings: { scale?: number; cap?: number },
+  venueSettings: { scale?: number; cap?: number; costFloors?: boolean },
   pEntry: number,
   pNow: number,
   state: PickState,

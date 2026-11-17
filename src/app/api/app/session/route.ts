@@ -61,6 +61,7 @@ export async function POST(request: Request) {
         lateCutoffPeriod: 3,
         lockWindowUntil: null,
         favoriteTeams: [],
+        posProvider: "manual",
       };
       const sql = db();
       const [venue] = await sql`

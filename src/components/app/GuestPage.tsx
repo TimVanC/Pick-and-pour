@@ -60,7 +60,8 @@ export function GuestPage() {
         <div className="mt-2 grid grid-cols-2 gap-3 text-center">
           {[game.away, game.home].map((side) => (
             <div key={side.abbr}>
-              <p className="truncate font-display text-lg uppercase text-cream/80">{side.name}</p>
+              {/* The full names are in the headline; the score box uses the short codes so nothing truncates on a phone. */}
+              <p className="font-display text-lg uppercase text-cream/80">{side.abbr}</p>
               <p className="font-display text-5xl font-bold tabular-nums">{side.score}</p>
             </div>
           ))}

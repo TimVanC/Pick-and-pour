@@ -1,7 +1,7 @@
 import type { ReportView, Role, VenueSettings } from "@/lib/app-types";
 import { effectiveLimits, jurisdiction, JURISDICTIONS } from "@/lib/discount";
 import { db } from "./db";
-import { createDemoSlate } from "./odds/refresh";
+import { createDemoSlate, createReplaySlate, replaySundays } from "./odds/refresh";
 import { UserError, auditVenue } from "./picks";
 import { hashSecret, verifySecret } from "./session";
 import { staffForVenue, type Venue } from "./state";
@@ -14,6 +14,10 @@ export async function updateSettings(
   staffId: string,
   input: Partial<VenueSettings> & { jurisdictionCode?: string },
 ): Promise<void> {
+  const posProvider =
+    input.posProvider === "mock-toast" || input.posProvider === "manual"
+      ? input.posProvider
+      : venue.settings.posProvider;
   const code =
     input.jurisdictionCode && input.jurisdictionCode in JURISDICTIONS
       ? input.jurisdictionCode
@@ -23,6 +27,8 @@ export async function updateSettings(
   const limits = effectiveLimits(profile, {
     scale: input.scale ?? venue.settings.scale,
     cap: input.cap ?? venue.settings.cap,
+    // A connected POS carries item costs, which allows the higher NJ cap.
+    costFloors: posProvider !== "manual",
   });
   const settings: VenueSettings = {
     ...venue.settings,
@@ -36,6 +42,7 @@ export async function updateSettings(
       Math.max(0, Math.round(input.lateCutoffPeriod ?? venue.settings.lateCutoffPeriod)),
     ),
     favoriteTeams: (input.favoriteTeams ?? venue.settings.favoriteTeams).slice(0, 8),
+    posProvider,
   };
   await db()`
     update venues set jurisdiction_code = ${code}, settings = ${JSON.stringify(settings)}::jsonb
@@ -113,7 +120,7 @@ export async function featureWindow(
     where g.window_label = ${windowLabel}
       and g.start_time > now() - interval '8 hours'
       and g.status in ('scheduled', 'live')
-      and (g.provider <> 'sim' or g.provider_game_id like ${`${venue.id}:%`})
+      and (g.provider not in ('sim', 'kalshi-replay') or g.provider_game_id like ${`${venue.id}:%`})
     on conflict do nothing
   `;
   await auditVenue(venue.id, staffId, "window_featured", null, { window: windowLabel });
@@ -128,6 +135,27 @@ export async function newDemoSlate(venue: Venue, staffId: string): Promise<void>
   }
   await createDemoSlate(venue.id, venue.settings.favoriteTeams);
   await auditVenue(venue.id, staffId, "demo_slate_created", null, null);
+}
+
+/** Replay a recorded NFL Sunday (real prices and break times) at the given speed. */
+export async function newReplaySlate(
+  venue: Venue,
+  staffId: string,
+  date: string,
+  speed: number,
+): Promise<void> {
+  if (!replaySundays().some((sunday) => sunday.date === date)) {
+    throw new UserError("That Sunday is not in the recorded games.");
+  }
+  const active = await db()`
+    select 1 from picks where venue_id = ${venue.id} and status in ('open', 'locked') limit 1
+  `;
+  if (active[0]) {
+    throw new UserError("There are active picks. Settle or void them before starting a replay.");
+  }
+  const safeSpeed = Math.min(240, Math.max(1, Math.round(speed) || 30));
+  await createReplaySlate(venue.id, date, safeSpeed, venue.settings.favoriteTeams);
+  await auditVenue(venue.id, staffId, "replay_slate_created", null, { date, speed: safeSpeed });
 }
 
 function validPin(pin: string): boolean {

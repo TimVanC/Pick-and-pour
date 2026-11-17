@@ -7,6 +7,8 @@ import {
   type AppState,
   type GameView,
   type PickView,
+  type PosCheckView,
+  type SettlementPreview,
   type Side,
 } from "@/lib/app-types";
 import { coveredSpendCents, discountCents, winDiscount } from "@/lib/discount";
@@ -437,6 +439,9 @@ function NewPick({
 }) {
   const [chosenGame, setChosenGame] = useState(gameId);
   const [side, setSide] = useState<Side | null>(null);
+  // With a POS connected the tab comes from an open check; typing it in is the fallback.
+  const usesPos = state.venue.settings.posProvider !== "manual";
+  const [manual, setManual] = useState(false);
   const { busy, error, run } = useAction();
   const game = state.games.find((item) => item.id === chosenGame);
   const open = state.games.filter((item) => item.featured && item.entryOpen);
@@ -522,17 +527,46 @@ function NewPick({
     });
   };
 
+  const chosen = (
+    <div className="rounded-3xl bg-charcoal-800 p-4">
+      <p className="font-display text-2xl font-bold uppercase">{team.name}</p>
+      <p className="text-cream/70">
+        {team.line} · {pct(team.p ?? 0)} ·{" "}
+        <span className="font-semibold text-gold">
+          {pct(winDiscount(state.venue.limits, team.p ?? 1))} off if they win
+        </span>
+      </p>
+    </div>
+  );
+
+  if (usesPos && !manual) {
+    const attach = (check: PosCheckView) =>
+      run(async () => {
+        const result = await post<{ pickId: string }>("/api/app/picks", {
+          action: "create",
+          gameId: game.id,
+          side,
+          posOrderId: check.orderId,
+          posCheckId: check.checkId,
+        });
+        refresh();
+        go({ name: "pick", id: result.pickId });
+      });
+    return (
+      <Step title="3. Choose the check" onBack={() => setSide(null)}>
+        {chosen}
+        <ErrorNote>{error}</ErrorNote>
+        <CheckPicker busy={busy} onChoose={attach} />
+        <Button variant="ghost" onClick={() => setManual(true)}>
+          Not on the list? Enter the tab by hand
+        </Button>
+      </Step>
+    );
+  }
+
   return (
-    <Step title="3. Label the tab" onBack={() => setSide(null)}>
-      <div className="rounded-3xl bg-charcoal-800 p-4">
-        <p className="font-display text-2xl font-bold uppercase">{team.name}</p>
-        <p className="text-cream/70">
-          {team.line} · {pct(team.p ?? 0)} ·{" "}
-          <span className="font-semibold text-gold">
-            {pct(winDiscount(state.venue.limits, team.p ?? 1))} off if they win
-          </span>
-        </p>
-      </div>
+    <Step title="3. Label the tab" onBack={() => (usesPos ? setManual(false) : setSide(null))}>
+      {chosen}
       <form onSubmit={submit} className="grid gap-4">
         <div className="grid grid-cols-[1fr_7rem] gap-3">
           <Field label="Guest first name" name="tabLabel" autoFocus maxLength={60} />
@@ -554,6 +588,186 @@ function NewPick({
         </Button>
       </form>
     </Step>
+  );
+}
+
+/** Open checks from the POS, to attach a pick to with one tap. */
+function CheckPicker({
+  busy,
+  onChoose,
+}: {
+  busy: boolean;
+  onChoose: (check: PosCheckView) => void;
+}) {
+  const { data, failedSince } = usePoll<{ checks: PosCheckView[] }>("/api/app/pos", 5000);
+  if (!data) {
+    return (
+      <p className="text-cream/70">
+        {failedSince ? "Can't reach the POS right now." : "Loading open checks…"}
+      </p>
+    );
+  }
+  if (data.checks.length === 0) {
+    return (
+      <p className="rounded-3xl border-2 border-dashed border-cream/30 p-5 text-center text-cream/70">
+        No open checks in the POS. Open the guest&apos;s tab there first, or enter it by hand.
+      </p>
+    );
+  }
+  return (
+    <ul className="grid gap-2">
+      {data.checks.map((check) => (
+        <li key={check.checkId}>
+          <button
+            type="button"
+            disabled={busy || check.activePickId !== null}
+            onClick={() => onChoose(check)}
+            className="flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl bg-charcoal-700 px-4 py-2 text-left active:bg-charcoal-600 disabled:opacity-50"
+          >
+            <span className="min-w-0">
+              <span className="block truncate font-display text-xl font-semibold uppercase">
+                {check.tabName}
+              </span>
+              <span className="block text-sm text-cream/70">
+                Check #{check.displayNumber} · {check.lines.filter((line) => !line.voided).length}{" "}
+                items
+              </span>
+            </span>
+            <span className="shrink-0 text-right">
+              <span className="block font-display text-xl font-semibold tabular-nums">
+                {formatCents(check.subtotalCents)}
+              </span>
+              {check.activePickId !== null && (
+                <span className="block text-sm text-gold">Has a pick</span>
+              )}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The POS check behind a pick: its items, what the pick covers, and what would
+ * come off each line. When the pick is ready it posts the discount to the check.
+ */
+function PosCheckPanel({
+  state,
+  pick,
+  onApplied,
+}: {
+  state: StaffState;
+  pick: PickView;
+  onApplied: () => void;
+}) {
+  const { data, failedSince, refresh } = usePoll<SettlementPreview>(
+    `/api/app/pos?pickId=${pick.id}`,
+    5000,
+  );
+  const { busy, error, run } = useAction();
+  const ready = pick.status === "locked" || pick.status === "settled";
+
+  if (!data) {
+    return (
+      <p className="rounded-3xl bg-charcoal-800 p-5 text-cream/70">
+        {failedSince ? "Can't reach the POS right now." : "Loading the check…"}
+      </p>
+    );
+  }
+  const { check, discount } = data;
+  const limited = discount.lines.some((line) => line.limitedBy !== null);
+  const limitNote =
+    state.venue.jurisdictionCode === "NY"
+      ? "No item goes below half its regular price."
+      : "No item is discounted below its cost.";
+
+  return (
+    <div className={`grid gap-4 rounded-3xl p-5 ${ready ? "border-2 border-gold/60" : "bg-charcoal-800"}`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="font-display text-xl font-bold uppercase">
+          POS check #{check.displayNumber}
+        </h2>
+        <p className="font-display text-xl font-semibold tabular-nums">
+          {formatCents(check.subtotalCents)}
+        </p>
+      </div>
+
+      <ul className="grid gap-1.5">
+        {discount.lines.map((line) => (
+          <li key={line.id} className="flex items-baseline justify-between gap-3">
+            <span className={`min-w-0 truncate ${line.coveredCents === 0 ? "text-cream/50" : ""}`}>
+              {line.name}
+              {line.coveredCents === 0 && " · before the pick"}
+              {line.limitedBy !== null && <span className="text-gold"> · limited</span>}
+            </span>
+            <span className="shrink-0 tabular-nums">
+              {formatCents(line.priceCents)}
+              {ready && line.discountCents > 0 && (
+                <span className="font-semibold text-gold"> −{formatCents(line.discountCents)}</span>
+              )}
+            </span>
+          </li>
+        ))}
+        {discount.lines.length === 0 && <li className="text-cream/70">Nothing rung in yet.</li>}
+      </ul>
+
+      <dl className="grid grid-cols-3 gap-3 border-t border-cream/10 pt-3">
+        <Stat label="Covered spend" value={formatCents(discount.coveredCents)} />
+        <Stat label="Discount" value={pct(pick.dFinal ?? (pick.status === "open" ? pick.dWin : 0))} />
+        <Stat
+          label={ready ? "Take off" : "If they win"}
+          value={formatCents(
+            ready ? discount.discountCents : Math.round(pick.dWin * discount.coveredCents),
+          )}
+          highlight
+        />
+      </dl>
+      {limited && ready && (
+        <p className="text-sm text-cream/70">
+          {limitNote} Without that limit this would be{" "}
+          {formatCents(discount.unlimitedDiscountCents)}.
+        </p>
+      )}
+      <p className="text-sm text-cream/60">
+        Before tax. Covers items rung in after the pick, up to{" "}
+        {formatCents(state.venue.settings.maxCoveredCents)}.
+      </p>
+
+      <ErrorNote>{error}</ErrorNote>
+      {ready && (
+        <Button
+          className="min-h-16 text-xl"
+          disabled={busy || !check.open}
+          onClick={() =>
+            run(async () => {
+              await post("/api/app/pos", { action: "apply", pickId: pick.id });
+              onApplied();
+            })
+          }
+        >
+          {busy ? "Posting…" : `Post ${formatCents(discount.discountCents)} to the check`}
+        </Button>
+      )}
+      {state.venue.settings.posProvider === "mock-toast" && check.open && (
+        <Button
+          variant="ghost"
+          disabled={busy}
+          onClick={() =>
+            run(async () => {
+              await post("/api/app/pos", {
+                action: "round",
+                orderId: check.orderId,
+                checkId: check.checkId,
+              });
+              refresh();
+            })
+          }
+        >
+          Ring in a round (mock POS)
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -777,6 +991,11 @@ function PickDetail({
   );
   const discount = discountCents(pick.dFinal ?? 0, covered);
   const fullPrice = (pick.dFinal ?? 0) <= 0;
+  // Attached to a POS check: the discount is worked out line by line and posted there.
+  const onPosCheck =
+    pick.posCheckId !== null &&
+    state.venue.settings.posProvider !== "manual" &&
+    ["open", "locked", "settled"].includes(pick.status);
   const guestUrl = origin ? `${origin}/p/${pick.guestToken}` : "";
 
   return (
@@ -840,7 +1059,11 @@ function PickDetail({
         />
       )}
 
-      {(pick.status === "locked" || pick.status === "settled") && (
+      {onPosCheck && (pick.status === "open" || !fullPrice) && (
+        <PosCheckPanel state={state} pick={pick} onApplied={refresh} />
+      )}
+
+      {(pick.status === "locked" || pick.status === "settled") && (fullPrice || !onPosCheck) && (
         <div className="grid gap-4 rounded-3xl border-2 border-gold/60 p-5">
           {fullPrice ? (
             <>
@@ -899,9 +1122,30 @@ function PickDetail({
           </p>
           {pick.discountCents ? (
             <p className="mt-1 text-cream/70">
-              {pct(pick.dFinal ?? 0)} off {formatCents(pick.coveredCents ?? 0)} covered spend.
+              {pct(pick.dFinal ?? 0)} off {formatCents(pick.coveredCents ?? 0)} covered spend
+              {pick.posCheckId ? ", posted to the POS check." : "."}
             </p>
           ) : null}
+          {pick.discountLines && (
+            <ul className="mt-3 grid gap-1.5 border-t border-cream/10 pt-3">
+              {pick.discountLines
+                .filter((line) => line.discountCents > 0)
+                .map((line) => (
+                  <li key={line.id} className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 truncate">
+                      {line.name}
+                      {line.limitedBy !== null && <span className="text-gold"> · limited</span>}
+                    </span>
+                    <span className="shrink-0 tabular-nums">
+                      {formatCents(line.priceCents)}{" "}
+                      <span className="font-semibold text-gold">
+                        −{formatCents(line.discountCents)}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          )}
         </div>
       )}
 

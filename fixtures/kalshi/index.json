@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-11-17T07:53:05.840Z",
+  "source": "kalshi",
+  "notes": "Prices: real Kalshi KXNFLGAME 1-minute candlesticks for 49 of 49 games (mid of yes bid/ask close, else last trade, forward-filled; clamped to 0.01..0.99). Period/break times and scores: real nflverse play-by-play time_of_day for 49 of 49 games; clockSeconds between plays is interpolated.",
+  "sundays": [
+    {
+      "date": "2026-11-15",
+      "games": [
+        "2026-11-15-NE-DET",
+        "2026-11-15-KC-ATL",
+        "2026-11-15-HOU-CLE",
+        "2026-11-15-MIN-GB",
+        "2026-11-15-MIA-IND",
+        "2026-11-15-CAR-NO",
+        "2026-11-15-BUF-NYJ",
+        "2026-11-15-JAX-TEN",
+        "2026-11-15-LA-ARI",
+        "2026-11-15-SEA-LV",
+        "2026-11-15-SF-DAL",
+        "2026-11-15-PIT-CIN"
+      ]
+    },
+    {
+      "date": "2026-11-08",
+      "games": [
+        "2026-11-08-CIN-ATL",
+        "2026-11-08-DEN-CAR",
+        "2026-11-08-DAL-IND",
+        "2026-11-08-NYJ-KC",
+        "2026-11-08-DET-MIA",
+        "2026-11-08-CLE-NO",
+        "2026-11-08-NYG-PHI",
+        "2026-11-08-LA-WAS",
+        "2026-11-08-HOU-LAC",
+        "2026-11-08-GB-NE",
+        "2026-11-08-ARI-SEA",
+        "2026-11-08-LV-SF",
+        "2026-11-08-TB-CHI"
+      ]
+    },
+    {
+      "date": "2026-11-01",
+      "games": [
+        "2026-11-01-BAL-BUF",
+        "2026-11-01-TEN-CIN",
+        "2026-11-01-ARI-DAL",
+        "2026-11-01-MIN-DET",
+        "2026-11-01-IND-JAX",
+        "2026-11-01-LV-NYJ",
+        "2026-11-01-CLE-PIT",
+        "2026-11-01-ATL-TB",
+        "2026-11-01-LAC-LA",
+        "2026-11-01-KC-DEN",
+        "2026-11-01-NE-MIA",
+        "2026-11-01-PHI-WAS"
+      ]
+    },
+    {
+      "date": "2026-10-25",
+      "games": [
+        "2026-10-25-PIT-NO",
+        "2026-10-25-SF-ATL",
+        "2026-10-25-CIN-BAL",
+        "2026-10-25-TB-CAR",
+        "2026-10-25-NYG-HOU",
+        "2026-10-25-IND-MIN",
+        "2026-10-25-MIA-NYJ",
+        "2026-10-25-CLE-TEN",
+        "2026-10-25-DEN-ARI",
+        "2026-10-25-GB-DET",
+        "2026-10-25-LA-LV",
+        "2026-10-25-KC-SEA"
+      ]
+    }
+  ]
+}

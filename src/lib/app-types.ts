@@ -4,6 +4,9 @@
  * times are ISO strings.
  */
 
+import type { CheckDiscount, LineDiscount } from "./line-discount";
+import type { PosCheck } from "@/server/pos/provider";
+
 export type Side = "home" | "away";
 export type Role = "manager" | "bartender";
 export type GameStatus = "scheduled" | "live" | "final" | "postponed" | "cancelled";
@@ -18,6 +21,8 @@ export type VenueSettings = {
   /** A manager-opened lock-in window stays open until this time. */
   lockWindowUntil: string | null;
   favoriteTeams: string[];
+  /** Where tabs come from: typed in by hand, or open checks from a POS. */
+  posProvider: "manual" | "mock-toast";
 };
 
 export type TeamView = {
@@ -85,7 +90,18 @@ export type PickView = {
   appliedAt: string | null;
   /** The creating or locking staff member can undo until this time. */
   undoUntil: string | null;
+  /** The POS check this pick is attached to. Null for a tab entered by hand. */
+  posOrderId: string | null;
+  posCheckId: string | null;
+  /** The line-by-line discount that was posted to the POS check. */
+  discountLines: LineDiscount[] | null;
 };
+
+/** An open POS check, with the pick already on it if there is one. */
+export type PosCheckView = PosCheck & { activePickId: string | null };
+
+/** What settling a POS-attached pick would post to the check right now. */
+export type SettlementPreview = { check: PosCheck; discount: CheckDiscount };
 
 export type StaffView = { id: string; name: string; role: Role };
 
@@ -97,6 +113,10 @@ export type VenueView = {
   settings: VenueSettings;
   /** The scale and cap in force after the jurisdiction's limits. */
   limits: { scale: number; cap: number };
+  /** True when item costs are loaded from a POS, so discounts are limited item by item. */
+  costFloors: boolean;
+  /** The highest cap this venue may choose right now. */
+  maxCap: number;
 };
 
 /** What GET /api/app/state returns, depending on how far sign-in has got. */
@@ -110,7 +130,13 @@ export type AppState =
       games: GameView[];
       picks: PickView[];
       /** Managers only. */
-      manager: { staff: StaffView[]; tvToken: string; canSimulate: boolean } | null;
+      manager: {
+        staff: StaffView[];
+        tvToken: string;
+        canSimulate: boolean;
+        /** Recorded NFL Sundays that can be replayed (empty when no fixtures are present). */
+        replaySundays: { date: string; games: number; source: string }[];
+      } | null;
       serverTime: string;
     };
 
@@ -126,7 +152,10 @@ export type GuestState = {
   venueName: string;
   rulesText: string;
   maxCoveredCents: number;
-  pick: Omit<PickView, "id" | "staffName" | "guestToken" | "undoUntil">;
+  pick: Omit<
+    PickView,
+    "id" | "staffName" | "guestToken" | "undoUntil" | "posOrderId" | "posCheckId" | "discountLines"
+  >;
   game: GameView;
   serverTime: string;
 };

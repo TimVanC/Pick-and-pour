@@ -1,0 +1,639 @@
+{
+  "generatedAt": "2026-11-17T17:45:27.090Z",
+  "params": {
+    "maxCoveredCents": 10000,
+    "lateCutoffPeriod": 3,
+    "guests": 140,
+    "playRate": 0.3,
+    "underdogShare": 0.5,
+    "lockInRate": 0.35,
+    "featuredPerWindow": 4,
+    "seed": 1
+  },
+  "rows": [
+    {
+      "date": "2026-11-15",
+      "profile": "NJ",
+      "scale": 0.75,
+      "cap": 0.9,
+      "costFloors": true,
+      "games": 12,
+      "featuredGames": 9,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 835950,
+      "coveredCents": 296900,
+      "discountCents": 25123,
+      "unlimitedDiscountCents": 25123,
+      "effectiveDiscount": 0.08461771640282924,
+      "discountShareOfSales": 0.030053232848854597,
+      "picks": {
+        "won": 16,
+        "lost": 21,
+        "lockedIn": 11,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 88293,
+        "effectiveDiscount": 0.29738295722465474
+      },
+      "bestCase": {
+        "discountCents": 25123
+      },
+      "hedgeTotals": {
+        "costCents": 40663,
+        "payoutCents": 18900,
+        "ridingDiscountCents": 18738
+      },
+      "label": "NJ default (POS, floors on)",
+      "hedges": 16
+    },
+    {
+      "date": "2026-11-08",
+      "profile": "NJ",
+      "scale": 0.75,
+      "cap": 0.9,
+      "costFloors": true,
+      "games": 13,
+      "featuredGames": 10,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 938150,
+      "coveredCents": 381250,
+      "discountCents": 34375,
+      "unlimitedDiscountCents": 34375,
+      "effectiveDiscount": 0.09016393442622951,
+      "discountShareOfSales": 0.03664126205830624,
+      "picks": {
+        "won": 17,
+        "lost": 23,
+        "lockedIn": 8,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 116826,
+        "effectiveDiscount": 0.3064288524590164
+      },
+      "bestCase": {
+        "discountCents": 31263
+      },
+      "hedgeTotals": {
+        "costCents": 53139,
+        "payoutCents": 29700,
+        "ridingDiscountCents": 29169
+      },
+      "label": "NJ default (POS, floors on)",
+      "hedges": 18
+    },
+    {
+      "date": "2026-11-01",
+      "profile": "NJ",
+      "scale": 0.75,
+      "cap": 0.9,
+      "costFloors": true,
+      "games": 12,
+      "featuredGames": 8,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 928950,
+      "coveredCents": 346550,
+      "discountCents": 42718,
+      "unlimitedDiscountCents": 42718,
+      "effectiveDiscount": 0.12326648391285529,
+      "discountShareOfSales": 0.045985252166424455,
+      "picks": {
+        "won": 18,
+        "lost": 23,
+        "lockedIn": 7,
+        "underdogs": 24,
+        "favorites": 24
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 77096,
+        "effectiveDiscount": 0.2224671764536142
+      },
+      "bestCase": {
+        "discountCents": 42501
+      },
+      "hedgeTotals": {
+        "costCents": 46459,
+        "payoutCents": 36800,
+        "ridingDiscountCents": 36555
+      },
+      "label": "NJ default (POS, floors on)",
+      "hedges": 15
+    },
+    {
+      "date": "2026-10-25",
+      "profile": "NJ",
+      "scale": 0.75,
+      "cap": 0.9,
+      "costFloors": true,
+      "games": 12,
+      "featuredGames": 9,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 916200,
+      "coveredCents": 364050,
+      "discountCents": 29467,
+      "unlimitedDiscountCents": 29467,
+      "effectiveDiscount": 0.08094217827221535,
+      "discountShareOfSales": 0.032162191661209344,
+      "picks": {
+        "won": 11,
+        "lost": 30,
+        "lockedIn": 7,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 106801,
+        "effectiveDiscount": 0.2933690427139129
+      },
+      "bestCase": {
+        "discountCents": 25569
+      },
+      "hedgeTotals": {
+        "costCents": 55426,
+        "payoutCents": 22700,
+        "ridingDiscountCents": 22465
+      },
+      "label": "NJ default (POS, floors on)",
+      "hedges": 12
+    },
+    {
+      "date": "2026-11-15",
+      "profile": "NJ",
+      "scale": 1,
+      "cap": 0.9,
+      "costFloors": true,
+      "games": 12,
+      "featuredGames": 9,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 835950,
+      "coveredCents": 296900,
+      "discountCents": 33515,
+      "unlimitedDiscountCents": 33515,
+      "effectiveDiscount": 0.11288312563152576,
+      "discountShareOfSales": 0.04009211077217537,
+      "picks": {
+        "won": 16,
+        "lost": 21,
+        "lockedIn": 11,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 108992,
+        "effectiveDiscount": 0.3671000336813742
+      },
+      "bestCase": {
+        "discountCents": 33515
+      },
+      "hedgeTotals": {
+        "costCents": 51686,
+        "payoutCents": 25300,
+        "ridingDiscountCents": 25005
+      },
+      "label": "NJ scale 1.0 (POS, floors on)",
+      "hedges": 16
+    },
+    {
+      "date": "2026-11-08",
+      "profile": "NJ",
+      "scale": 1,
+      "cap": 0.9,
+      "costFloors": true,
+      "games": 13,
+      "featuredGames": 10,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 935450,
+      "coveredCents": 380200,
+      "discountCents": 45607,
+      "unlimitedDiscountCents": 45607,
+      "effectiveDiscount": 0.11995528669121515,
+      "discountShareOfSales": 0.04875407557859854,
+      "picks": {
+        "won": 17,
+        "lost": 23,
+        "lockedIn": 8,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 138994,
+        "effectiveDiscount": 0.36558127301420307
+      },
+      "bestCase": {
+        "discountCents": 41453
+      },
+      "hedgeTotals": {
+        "costCents": 65969,
+        "payoutCents": 39300,
+        "ridingDiscountCents": 38776
+      },
+      "label": "NJ scale 1.0 (POS, floors on)",
+      "hedges": 18
+    },
+    {
+      "date": "2026-11-01",
+      "profile": "NJ",
+      "scale": 1,
+      "cap": 0.9,
+      "costFloors": true,
+      "games": 12,
+      "featuredGames": 8,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 922850,
+      "coveredCents": 357550,
+      "discountCents": 53558,
+      "unlimitedDiscountCents": 53558,
+      "effectiveDiscount": 0.14979163753321215,
+      "discountShareOfSales": 0.05803543371078723,
+      "picks": {
+        "won": 17,
+        "lost": 23,
+        "lockedIn": 8,
+        "underdogs": 23,
+        "favorites": 25
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 108975,
+        "effectiveDiscount": 0.30478254789539927
+      },
+      "bestCase": {
+        "discountCents": 52218
+      },
+      "hedgeTotals": {
+        "costCents": 61393,
+        "payoutCents": 44900,
+        "ridingDiscountCents": 44536
+      },
+      "label": "NJ scale 1.0 (POS, floors on)",
+      "hedges": 14
+    },
+    {
+      "date": "2026-10-25",
+      "profile": "NJ",
+      "scale": 1,
+      "cap": 0.9,
+      "costFloors": true,
+      "games": 12,
+      "featuredGames": 9,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 916200,
+      "coveredCents": 364050,
+      "discountCents": 39255,
+      "unlimitedDiscountCents": 39299,
+      "effectiveDiscount": 0.10782859497321796,
+      "discountShareOfSales": 0.04284544859201048,
+      "picks": {
+        "won": 11,
+        "lost": 30,
+        "lockedIn": 7,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 3,
+      "worstCase": {
+        "discountCents": 137989,
+        "effectiveDiscount": 0.37903859359978026
+      },
+      "bestCase": {
+        "discountCents": 34034
+      },
+      "hedgeTotals": {
+        "costCents": 72030,
+        "payoutCents": 30100,
+        "ridingDiscountCents": 29921
+      },
+      "label": "NJ scale 1.0 (POS, floors on)",
+      "hedges": 12
+    },
+    {
+      "date": "2026-11-15",
+      "profile": "NJ",
+      "scale": 0.75,
+      "cap": 0.65,
+      "costFloors": false,
+      "games": 12,
+      "featuredGames": 9,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 835950,
+      "coveredCents": 296900,
+      "discountCents": 25123,
+      "unlimitedDiscountCents": 25123,
+      "effectiveDiscount": 0.08461771640282924,
+      "discountShareOfSales": 0.030053232848854597,
+      "picks": {
+        "won": 16,
+        "lost": 21,
+        "lockedIn": 11,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 88797,
+        "effectiveDiscount": 0.29908049848433815
+      },
+      "bestCase": {
+        "discountCents": 25123
+      },
+      "hedgeTotals": {
+        "costCents": 40777,
+        "payoutCents": 18900,
+        "ridingDiscountCents": 18738
+      },
+      "label": "NJ default (manual, 65% cap)",
+      "hedges": 16
+    },
+    {
+      "date": "2026-11-08",
+      "profile": "NJ",
+      "scale": 0.75,
+      "cap": 0.65,
+      "costFloors": false,
+      "games": 13,
+      "featuredGames": 10,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 938150,
+      "coveredCents": 381250,
+      "discountCents": 34370,
+      "unlimitedDiscountCents": 34370,
+      "effectiveDiscount": 0.09015081967213115,
+      "discountShareOfSales": 0.03663593242018867,
+      "picks": {
+        "won": 17,
+        "lost": 23,
+        "lockedIn": 8,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 117505,
+        "effectiveDiscount": 0.3082098360655738
+      },
+      "bestCase": {
+        "discountCents": 31258
+      },
+      "hedgeTotals": {
+        "costCents": 53318,
+        "payoutCents": 29700,
+        "ridingDiscountCents": 29169
+      },
+      "label": "NJ default (manual, 65% cap)",
+      "hedges": 18
+    },
+    {
+      "date": "2026-11-01",
+      "profile": "NJ",
+      "scale": 0.75,
+      "cap": 0.65,
+      "costFloors": false,
+      "games": 12,
+      "featuredGames": 8,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 928950,
+      "coveredCents": 346550,
+      "discountCents": 42718,
+      "unlimitedDiscountCents": 42718,
+      "effectiveDiscount": 0.12326648391285529,
+      "discountShareOfSales": 0.045985252166424455,
+      "picks": {
+        "won": 18,
+        "lost": 23,
+        "lockedIn": 7,
+        "underdogs": 24,
+        "favorites": 24
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 77096,
+        "effectiveDiscount": 0.2224671764536142
+      },
+      "bestCase": {
+        "discountCents": 42501
+      },
+      "hedgeTotals": {
+        "costCents": 46459,
+        "payoutCents": 36800,
+        "ridingDiscountCents": 36555
+      },
+      "label": "NJ default (manual, 65% cap)",
+      "hedges": 15
+    },
+    {
+      "date": "2026-10-25",
+      "profile": "NJ",
+      "scale": 0.75,
+      "cap": 0.65,
+      "costFloors": false,
+      "games": 12,
+      "featuredGames": 9,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 916200,
+      "coveredCents": 364050,
+      "discountCents": 29467,
+      "unlimitedDiscountCents": 29467,
+      "effectiveDiscount": 0.08094217827221535,
+      "discountShareOfSales": 0.032162191661209344,
+      "picks": {
+        "won": 11,
+        "lost": 30,
+        "lockedIn": 7,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 107033,
+        "effectiveDiscount": 0.2940063178134872
+      },
+      "bestCase": {
+        "discountCents": 25569
+      },
+      "hedgeTotals": {
+        "costCents": 55506,
+        "payoutCents": 22700,
+        "ridingDiscountCents": 22465
+      },
+      "label": "NJ default (manual, 65% cap)",
+      "hedges": 12
+    },
+    {
+      "date": "2026-11-15",
+      "profile": "NY",
+      "scale": 0.5,
+      "cap": 0.5,
+      "costFloors": true,
+      "games": 12,
+      "featuredGames": 9,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 835950,
+      "coveredCents": 296900,
+      "discountCents": 16758,
+      "unlimitedDiscountCents": 16758,
+      "effectiveDiscount": 0.056443246884472886,
+      "discountShareOfSales": 0.020046653507984926,
+      "picks": {
+        "won": 16,
+        "lost": 21,
+        "lockedIn": 11,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 59745,
+        "effectiveDiscount": 0.20122937015830245
+      },
+      "bestCase": {
+        "discountCents": 16758
+      },
+      "hedgeTotals": {
+        "costCents": 27492,
+        "payoutCents": 12800,
+        "ridingDiscountCents": 12500
+      },
+      "label": "NY (fixed 50%)",
+      "hedges": 16
+    },
+    {
+      "date": "2026-11-08",
+      "profile": "NY",
+      "scale": 0.5,
+      "cap": 0.5,
+      "costFloors": true,
+      "games": 13,
+      "featuredGames": 10,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 925450,
+      "coveredCents": 365350,
+      "discountCents": 26715,
+      "unlimitedDiscountCents": 26715,
+      "effectiveDiscount": 0.07312166415765704,
+      "discountShareOfSales": 0.02886703765735588,
+      "picks": {
+        "won": 20,
+        "lost": 18,
+        "lockedIn": 10,
+        "underdogs": 22,
+        "favorites": 26
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 60068,
+        "effectiveDiscount": 0.16441220747228685
+      },
+      "bestCase": {
+        "discountCents": 24104
+      },
+      "hedgeTotals": {
+        "costCents": 32544,
+        "payoutCents": 24400,
+        "ridingDiscountCents": 23902
+      },
+      "label": "NY (fixed 50%)",
+      "hedges": 19
+    },
+    {
+      "date": "2026-11-01",
+      "profile": "NY",
+      "scale": 0.5,
+      "cap": 0.5,
+      "costFloors": true,
+      "games": 12,
+      "featuredGames": 8,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 928950,
+      "coveredCents": 346550,
+      "discountCents": 28482,
+      "unlimitedDiscountCents": 28482,
+      "effectiveDiscount": 0.08218727456355504,
+      "discountShareOfSales": 0.03066042305829162,
+      "picks": {
+        "won": 18,
+        "lost": 23,
+        "lockedIn": 7,
+        "underdogs": 24,
+        "favorites": 24
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 51399,
+        "effectiveDiscount": 0.14831626027990188
+      },
+      "bestCase": {
+        "discountCents": 28338
+      },
+      "hedgeTotals": {
+        "costCents": 31120,
+        "payoutCents": 24700,
+        "ridingDiscountCents": 24374
+      },
+      "label": "NY (fixed 50%)",
+      "hedges": 15
+    },
+    {
+      "date": "2026-10-25",
+      "profile": "NY",
+      "scale": 0.5,
+      "cap": 0.5,
+      "costFloors": true,
+      "games": 12,
+      "featuredGames": 9,
+      "guests": 140,
+      "players": 48,
+      "barSalesCents": 916200,
+      "coveredCents": 364050,
+      "discountCents": 19653,
+      "unlimitedDiscountCents": 19653,
+      "effectiveDiscount": 0.053984342810053564,
+      "discountShareOfSales": 0.0214505566470203,
+      "picks": {
+        "won": 11,
+        "lost": 30,
+        "lockedIn": 7,
+        "underdogs": 25,
+        "favorites": 23
+      },
+      "limitedLines": 0,
+      "worstCase": {
+        "discountCents": 71470,
+        "effectiveDiscount": 0.19631918692487296
+      },
+      "bestCase": {
+        "discountCents": 17059
+      },
+      "hedgeTotals": {
+        "costCents": 37205,
+        "payoutCents": 15300,
+        "ridingDiscountCents": 14981
+      },
+      "label": "NY (fixed 50%)",
+      "hedges": 12
+    }
+  ]
+}

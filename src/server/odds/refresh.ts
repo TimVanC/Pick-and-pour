@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { vigFreeProbability } from "@/lib/discount";
 import { db } from "../db";
+import {
+  fixtureTimeAt,
+  kalshiReplayProvider,
+  realTimeOf,
+  type ReplayGameState,
+} from "./kalshi-replay";
 import type { GameRow, GameUpdate, OddsProvider } from "./provider";
+import { homeProbabilityAt, loadFixtureIndex, loadSunday } from "./replay-core";
 import {
   DEMO_TEAMS,
   initialSimState,
@@ -13,6 +20,7 @@ import {
 /** Register a real odds API here to replace the simulation. */
 const providers: Record<string, OddsProvider> = {
   [simulatedProvider.name]: simulatedProvider,
+  [kalshiReplayProvider.name]: kalshiReplayProvider,
 };
 
 /** Only featured games are refreshed, and at most this often (seconds). */
@@ -177,6 +185,98 @@ export async function createDemoSlate(
           values (${venueId}, ${id}, ${window.label})
         `,
       );
+    }
+  }
+  await sql.transaction(queries);
+}
+
+/** The recorded Sundays that can be replayed, newest first. Empty when no fixtures are present. */
+export function replaySundays(): { date: string; games: number; source: string }[] {
+  try {
+    const index = loadFixtureIndex();
+    return index.sundays.map((sunday) => ({
+      date: sunday.date,
+      games: sunday.games.length,
+      source: index.source,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Most games featured per window when a replay starts, so the TV board stays readable. */
+const REPLAY_FEATURED_PER_WINDOW = 4;
+/** Real seconds between starting a replay and the first kickoff. */
+const REPLAY_LEAD_SECONDS = 45;
+
+/**
+ * Start replaying a recorded NFL Sunday for a venue. Every game of that day
+ * goes on the schedule; the first four of each kickoff window are featured.
+ */
+export async function createReplaySlate(
+  venueId: string,
+  date: string,
+  speed: number,
+  favoriteTeams: string[],
+): Promise<void> {
+  const sql = db();
+  const fixtures = loadSunday(date).sort((a, b) => a.kickoff - b.kickoff);
+  if (fixtures.length === 0) throw new Error(`No games recorded for ${date}.`);
+
+  const realStart = Date.now();
+  const firstKickoff = fixtures[0].kickoff;
+  const base = {
+    fixtureStart: firstKickoff - REPLAY_LEAD_SECONDS * speed,
+    realStart,
+    speed,
+  };
+
+  const queries = [sql`delete from featured_games where venue_id = ${venueId}`];
+  const featuredInWindow = new Map<string, number>();
+  // Favorite teams are featured first within their window.
+  const isFavorite = (name: string) => favoriteTeams.includes(name);
+  const ordered = [...fixtures].sort(
+    (a, b) =>
+      a.kickoff - b.kickoff ||
+      Number(isFavorite(b.home.name) || isFavorite(b.away.name)) -
+        Number(isFavorite(a.home.name) || isFavorite(a.away.name)),
+  );
+
+  for (const fixture of ordered) {
+    const id = randomUUID();
+    const state: ReplayGameState = { ...base, fixtureId: fixture.id };
+    const start = realTimeOf(state, fixture.kickoff);
+    const homeP = homeProbabilityAt(fixture, fixtureTimeAt(state, realStart));
+    const lines = linesFor(homeP);
+    queries.push(
+      sql`
+        insert into games
+          (id, provider, provider_game_id, home, away, home_abbr, away_abbr,
+           start_time, window_label, provider_state)
+        values (
+          ${id}, 'kalshi-replay', ${`${venueId}:${fixture.id}:${realStart}`},
+          ${fixture.home.name}, ${fixture.away.name}, ${fixture.home.abbr}, ${fixture.away.abbr},
+          ${start.toISOString()}, ${fixture.window}, ${JSON.stringify(state)}::jsonb
+        )
+      `,
+      sql`
+        insert into odds_snapshots
+          (game_id, home_odds, away_odds, home_p, away_p, books_raw)
+        values (
+          ${id}, ${lines.homeOdds}, ${lines.awayOdds},
+          ${vigFreeProbability(lines.homeOdds, lines.awayOdds)},
+          ${vigFreeProbability(lines.awayOdds, lines.homeOdds)},
+          ${JSON.stringify({ kalshi: fixture.marketTicker ?? fixture.id, homeP })}::jsonb
+        )
+      `,
+    );
+    const count = featuredInWindow.get(fixture.window) ?? 0;
+    if (count < REPLAY_FEATURED_PER_WINDOW) {
+      featuredInWindow.set(fixture.window, count + 1);
+      queries.push(sql`
+        insert into featured_games (venue_id, game_id, window_label)
+        values (${venueId}, ${id}, ${fixture.window})
+      `);
     }
   }
   await sql.transaction(queries);

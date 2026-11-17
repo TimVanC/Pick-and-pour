@@ -4,6 +4,7 @@ import {
   addStaff,
   featureWindow,
   newDemoSlate,
+  newReplaySlate,
   openLockWindow,
   removeStaff,
   reportForDay,
@@ -54,6 +55,10 @@ export async function POST(request: Request) {
             typeof input.maxCoveredCents === "number" ? input.maxCoveredCents : undefined,
           lateCutoffPeriod:
             typeof input.lateCutoffPeriod === "number" ? input.lateCutoffPeriod : undefined,
+          posProvider:
+            input.posProvider === "mock-toast" || input.posProvider === "manual"
+              ? input.posProvider
+              : undefined,
         });
         break;
       case "feature":
@@ -67,6 +72,9 @@ export async function POST(request: Request) {
         break;
       case "newSlate":
         await newDemoSlate(venue, staff.id);
+        break;
+      case "newReplay":
+        await newReplaySlate(venue, staff.id, String(input.date ?? ""), Number(input.speed) || 30);
         break;
       case "addStaff":
         await addStaff(venue, staff.id, {

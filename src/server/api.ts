@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import type { Role } from "@/lib/app-types";
 import { db } from "./db";
 import { UserError } from "./picks";
+import { PosError } from "./pos/provider";
 import { getSession } from "./session";
 import { venueById, type Venue } from "./state";
 
@@ -58,7 +59,7 @@ export async function respond(run: () => Promise<unknown>): Promise<Response> {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
-    if (error instanceof UserError) {
+    if (error instanceof UserError || error instanceof PosError) {
       return Response.json({ error: error.message }, { status: 400 });
     }
     if (error instanceof AuthError) {
