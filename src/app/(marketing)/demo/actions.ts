@@ -1,7 +1,7 @@
 "use server";
 
 import { createHash } from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import { headers } from "next/headers";
 import { Resend } from "resend";
 import {
@@ -45,11 +45,10 @@ async function hashedIp(): Promise<string> {
     .digest("hex");
 }
 
-function supabaseAdmin() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+/** SQL client for the Neon Postgres database, or null when DATABASE_URL is not set. */
+function database() {
+  const url = process.env.DATABASE_URL;
+  return url ? neon(url) : null;
 }
 
 async function sendLeadEmail(lead: Lead): Promise<void> {
@@ -100,41 +99,39 @@ export async function submitDemoRequest(
     return { status: "error", error: "rateLimited", values: lead };
   }
 
-  const supabase = supabaseAdmin();
-  if (!supabase) {
+  const sql = database();
+  if (!sql) {
     if (process.env.NODE_ENV === "production") {
-      console.error("[leads] Supabase is not configured; demo request lost.");
+      console.error("[leads] DATABASE_URL is not set; demo request lost.");
       return { status: "error", error: "generic", values: lead };
     }
-    // Local development without keys: log instead of saving.
-    console.info("[leads] Supabase not configured. Demo request (dev only):", lead);
+    // Local development without a database: log instead of saving.
+    console.info("[leads] DATABASE_URL not set. Demo request (dev only):", lead);
     return { status: "success" };
   }
 
-  const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
-  const { count, error: countError } = await supabase
-    .from("leads")
-    .select("id", { count: "exact", head: true })
-    .eq("ip_hash", ipHash)
-    .gte("created_at", since);
-  if (!countError && (count ?? 0) >= RATE_LIMIT_MAX) {
-    return { status: "error", error: "rateLimited", values: lead };
-  }
+  try {
+    const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+    const [{ count }] = await sql`
+      select count(*)::int as count
+      from leads
+      where ip_hash = ${ipHash} and created_at >= ${since}
+    `;
+    if (count >= RATE_LIMIT_MAX) {
+      return { status: "error", error: "rateLimited", values: lead };
+    }
 
-  const { error: insertError } = await supabase.from("leads").insert({
-    name: lead.name,
-    bar_name: lead.barName,
-    city_state: lead.cityState,
-    role: lead.role,
-    phone: lead.phone || null,
-    email: lead.email,
-    sports: lead.sports,
-    tv_count: lead.tvCount || null,
-    notes: lead.notes || null,
-    ip_hash: ipHash,
-  });
-  if (insertError) {
-    console.error("[leads] Insert failed:", insertError.message);
+    await sql`
+      insert into leads
+        (name, bar_name, city_state, role, phone, email, sports, tv_count, notes, ip_hash)
+      values (
+        ${lead.name}, ${lead.barName}, ${lead.cityState}, ${lead.role},
+        ${lead.phone || null}, ${lead.email}, ${lead.sports},
+        ${lead.tvCount || null}, ${lead.notes || null}, ${ipHash}
+      )
+    `;
+  } catch (error) {
+    console.error("[leads] Saving the demo request failed:", error);
     return { status: "error", error: "generic", values: lead };
   }
 

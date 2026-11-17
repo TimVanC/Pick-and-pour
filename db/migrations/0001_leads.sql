@@ -1,6 +1,6 @@
--- Demo requests from the marketing site (/demo).
--- Rows are written only by the server with the service-role key.
--- Row Level Security is on with no policies, so the public (anon) key can't read or write.
+-- Demo requests from the marketing site (/demo). Neon Postgres.
+-- Rows are written only by the server, which connects with DATABASE_URL.
+-- Nothing in the browser can reach this table.
 
 create table if not exists public.leads (
   id uuid primary key default gen_random_uuid(),
@@ -17,8 +17,6 @@ create table if not exists public.leads (
   -- Salted hash of the sender's IP, used only for rate limiting.
   ip_hash text
 );
-
-alter table public.leads enable row level security;
 
 create index if not exists leads_ip_hash_created_at_idx
   on public.leads (ip_hash, created_at desc);
